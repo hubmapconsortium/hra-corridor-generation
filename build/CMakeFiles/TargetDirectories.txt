@@ -1,0 +1,4 @@
+/home/ubuntu/Desktop/project/3d-corridor-main/build/CMakeFiles/corridor_generator.dir
+/home/ubuntu/Desktop/project/3d-corridor-main/build/CMakeFiles/geometry.dir
+/home/ubuntu/Desktop/project/3d-corridor-main/build/CMakeFiles/edit_cache.dir
+/home/ubuntu/Desktop/project/3d-corridor-main/build/CMakeFiles/rebuild_cache.dir
