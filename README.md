@@ -1,4 +1,4 @@
-# 3D Corridor for Tissue Block Re-registration
+# 3D Corridor generation with CPU parallelization for Tissue Block Re-registration
 
 ## Overview:
 3D corridor generation given intersection volume between the tissue block and anatomical structures.
