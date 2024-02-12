@@ -5,7 +5,7 @@
 **Release date:** 9 Feb 2024
 
 ## Overview:
-A C++ library for http service for 3D corridor generation given a tissue block.
+A C++ library for http service for 3D corridor generation given a RUI Registration.
 
 
 ## Dependencies:
