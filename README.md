@@ -141,7 +141,7 @@ POST http://server_ip:port/get-corridor
   ```
 
   Input: [RUI Registration](examples/test-corridor.json)
-  Produces: [result](examples/sample-corridor-results.glb)
+  Produces: [result](examples/sample-corridor-result.glb)
 
 
 
