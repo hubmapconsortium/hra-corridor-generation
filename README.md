@@ -5,7 +5,8 @@
 **Release date:** 9 Feb 2024
 
 ## Overview:
-3D corridor generation given intersection volume between the tissue block and anatomical structures.
+A C++ library for http service for 3D corridor generation given a tissue block.
+
 
 ## Dependencies:
 For C++ libraries:
