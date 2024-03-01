@@ -47,9 +47,8 @@ For C++ libraries:
     sudo apt-get install libcpprest-dev
     ```
 8. CGAL
-    ```bash
     [download CGAL 5.5.3](https://github.com/CGAL/cgal/releases/tag/v5.5.3)
-    ```
+
 
 ## Compilation
 
