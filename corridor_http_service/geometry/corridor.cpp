@@ -391,55 +391,66 @@ std::vector<Point> create_point_cloud_corridor_for_multiple_AS(std::vector<Mymes
     struct timeval start, end;
     long long microseconds;
     gettimeofday(&start, nullptr);
+    //private(center_path, point_cloud)
 
-    #pragma omp parallel for schedule(dynamic)
-    //double c_x, c_y, c_z;
-    for //(double c_x = intersect_x_min - example_d_x / 2; c_x < intersect_x_max + example_d_x / 2; c_x += step_x)
-        (int x_count = 0; x_count < x_loop; x_count += 1)
-        for //(double c_y = intersect_y_min - example_d_y / 2; c_y < intersect_y_max + example_d_y / 2; c_y += step_y)
-            (int y_count = 0; y_count < y_loop; y_count += 1)
-            for//(double c_z = intersect_z_min - example_d_z / 2; c_z < intersect_z_max + example_d_z / 2; c_z += step_z)
-                (int z_count = 0; z_count < z_loop; z_count += 1)
-            {
-                // std::cout << c_x << " " << c_y << " " << c_z << std::endl;
-                double c_x, c_y, c_z;
-                c_x = intersect_x_min - example_d_x / 2 + (step_x * x_count);
-                c_y = intersect_y_min - example_d_y / 2 + (step_y * y_count); 
-                c_z = intersect_z_min - example_d_z / 2 + (step_z * z_count);
-                Mytissue cur_tissue(c_x, c_y, c_z, example_d_x, example_d_y, example_d_z);
-                
-                bool is_in_corridor = true;
-                for (int i = 0; i < meshes.size(); i++)
+
+    std::vector<std::vector<Point>> privatePointCloudVectors(omp_get_max_threads()); // Create private vectors for each thread
+
+    #pragma omp parallel 
+    {
+        int threadId = omp_get_thread_num();
+        #pragma omp for schedule(dynamic) 
+        //(double c_x = intersect_x_min - example_d_x / 2; c_x < intersect_x_max + example_d_x / 2; c_x += step_x)
+        for (int x_count = 0; x_count < x_loop; x_count += 1) {
+        //(double c_y = intersect_y_min - example_d_y / 2; c_y < intersect_y_max + example_d_y / 2; c_y += step_y)
+            for (int y_count = 0; y_count < y_loop; y_count += 1)
+            //(double c_z = intersect_z_min - example_d_z / 2; c_z < intersect_z_max + example_d_z / 2; c_z += step_z)
+                for (int z_count = 0; z_count < z_loop; z_count += 1)
                 {
-                    Mymesh &mesh = meshes[i];
-                    double example_intersection_volume = tbv * intersection_percnts[i];
+                // std::cout << c_x << " " << c_y << " " << c_z << std::endl;
+                    double c_x, c_y, c_z;
+                    c_x = intersect_x_min - example_d_x / 2 + (step_x * x_count);
+                    c_y = intersect_y_min - example_d_y / 2 + (step_y * y_count); 
+                    c_z = intersect_z_min - example_d_z / 2 + (step_z * z_count);
+                    Mytissue cur_tissue(c_x, c_y, c_z, example_d_x, example_d_y, example_d_z);
 
-                    double intersection_volume = compute_intersection_volume(mesh, cur_tissue);
-                    // std::cout << i << " example intersection volume: " << example_intersection_volume << " " << intersection_volume << std::endl;
-                    if (std::abs(intersection_volume - example_intersection_volume) > tolerance * example_intersection_volume)
+                    bool is_in_corridor = true;
+                    for (int i = 0; i < meshes.size(); i++)
                     {
-                        is_in_corridor = false;
-                        break;
+                        Mymesh &mesh = meshes[i];
+                        double example_intersection_volume = tbv * intersection_percnts[i];
+
+                        double intersection_volume = compute_intersection_volume(mesh, cur_tissue);
+                    // std::cout << i << " example intersection volume: " << example_intersection_volume << " " << intersection_volume << std::endl;
+                        if (std::abs(intersection_volume - example_intersection_volume) > tolerance * example_intersection_volume)
+                        {
+                            is_in_corridor = false;
+                            break;
+                        }
+
                     }
 
-                }
-
-                if (is_in_corridor)
-                {
-                    center_path.push_back(Point(c_x, c_y, c_z));
+                    if (is_in_corridor)
+                    {
+                        //privateCenterVectors[threadId].push_back(Point(c_x, c_y, c_z));
                     //std::cout << generate_pertubation(step_x) << " " << generate_pertubation(step_y) << " " << generate_pertubation(step_z) << std::endl;
-                    point_cloud.push_back(Point(c_x - example_d_x / 2 , c_y - example_d_y / 2 , c_z - example_d_z / 2 ));
-                    point_cloud.push_back(Point(c_x + example_d_x / 2 , c_y - example_d_y / 2 , c_z - example_d_z / 2 ));
-                    point_cloud.push_back(Point(c_x - example_d_x / 2 , c_y + example_d_y / 2 , c_z - example_d_z / 2 ));
-                    point_cloud.push_back(Point(c_x + example_d_x / 2 , c_y + example_d_y / 2 , c_z - example_d_z / 2 ));
-                    point_cloud.push_back(Point(c_x - example_d_x / 2 , c_y - example_d_y / 2 , c_z + example_d_z / 2 ));
-                    point_cloud.push_back(Point(c_x + example_d_x / 2 , c_y - example_d_y / 2 , c_z + example_d_z / 2 ));
-                    point_cloud.push_back(Point(c_x - example_d_x / 2 , c_y + example_d_y / 2 , c_z + example_d_z / 2 ));
-                    point_cloud.push_back(Point(c_x + example_d_x / 2 , c_y + example_d_y / 2 , c_z + example_d_z / 2 ));
-
+                        privatePointCloudVectors[threadId].push_back(Point(c_x - example_d_x / 2 , c_y - example_d_y / 2 , c_z - example_d_z / 2 ));
+                        privatePointCloudVectors[threadId].push_back(Point(c_x + example_d_x / 2 , c_y - example_d_y / 2 , c_z - example_d_z / 2 ));
+                        privatePointCloudVectors[threadId].push_back(Point(c_x - example_d_x / 2 , c_y + example_d_y / 2 , c_z - example_d_z / 2 ));
+                        privatePointCloudVectors[threadId].push_back(Point(c_x + example_d_x / 2 , c_y + example_d_y / 2 , c_z - example_d_z / 2 ));
+                        privatePointCloudVectors[threadId].push_back(Point(c_x - example_d_x / 2 , c_y - example_d_y / 2 , c_z + example_d_z / 2 ));
+                        privatePointCloudVectors[threadId].push_back(Point(c_x + example_d_x / 2 , c_y - example_d_y / 2 , c_z + example_d_z / 2 ));
+                        privatePointCloudVectors[threadId].push_back(Point(c_x - example_d_x / 2 , c_y + example_d_y / 2 , c_z + example_d_z / 2 ));
+                        privatePointCloudVectors[threadId].push_back(Point(c_x + example_d_x / 2 , c_y + example_d_y / 2 , c_z + example_d_z / 2 ));
+                    }
                 }
+        }
+    }
+    
+    for (const auto& privatePointCloudVector : privatePointCloudVectors) {
+        point_cloud.insert(point_cloud.end(), privatePointCloudVector.begin(), privatePointCloudVector.end());
+    }
 
-            }
 
     gettimeofday(&end, nullptr);
     microseconds = (end.tv_sec - start.tv_sec) * 1000000LL + (end.tv_usec - start.tv_usec);
