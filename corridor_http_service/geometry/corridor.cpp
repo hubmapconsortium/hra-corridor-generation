@@ -447,6 +447,7 @@ std::vector<Point> create_point_cloud_corridor_for_multiple_AS(std::vector<Mymes
         }
     }
     
+    // Merge private vectors into a single vector
     for (const auto& privatePointCloudVector : privatePointCloudVectors) {
         point_cloud.insert(point_cloud.end(), privatePointCloudVector.begin(), privatePointCloudVector.end());
     }
