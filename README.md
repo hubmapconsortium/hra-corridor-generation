@@ -34,23 +34,22 @@ For C++ libraries:
     ```bash
     sudo apt-get install libmpfr-dev
     ```
-3. CGAL
-    ```bash
-    sudo apt-get install libcgal-dev
-    ```
-4. Eigen3
+5. Eigen3
     ```bash
     sudo apt install libeigen3-dev
     ```
-5. assimp
+6. assimp
     ```bash
     sudo apt-get install libassimp-dev
     ```
-6. cpprestsdk
+7. cpprestsdk
     ```bash
     sudo apt-get install libcpprest-dev
     ```
-
+8. CGAL
+    ```bash
+    [download CGAL 5.5.3](https://github.com/CGAL/cgal/releases/tag/v5.5.3)
+    ```
 
 ## Compilation
 
