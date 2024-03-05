@@ -145,21 +145,39 @@ void parse_json(json::value const &jvalue, json::value &answer)
          std::vector<Mymesh> corridor_meshes;
          std::vector<double> intersection_percnts;
          Mytissue example_tissue(0.0, 0.0, 0.0, params["x_dimension"]/1000, params["y_dimension"]/1000, params["z_dimension"]/1000);
-         double tolerance = 0.2;
+         double tolerance = 0.05;
 
-         for (auto s: result) {
-            corridor_meshes.push_back(total_body[organ_file_name][s.first]);
-            intersection_percnts.push_back(s.second);
 
-         }       
+         auto time1 = std::chrono::high_resolution_clock::now();
 
-         for (Mymesh &mesh: corridor_meshes) mesh.create_aabb_tree();
-
-         Surface_mesh corridor_generated = create_corridor(corridor_meshes, example_tissue, intersection_percnts, tolerance);
-            
          std::string corridor_file_path = "output_corridor.off";
-         std::ofstream corridor_output(corridor_file_path);
-         corridor_output << corridor_generated;
+
+         if (result.size() == 1) {
+            //return mesh
+
+
+
+         } else if (result.size() == 0 or result.size() > 3) {
+            //return tissue block
+
+
+
+
+         } else {// TB intersects 2 or 3 meshes
+            for (auto s: result) {
+               corridor_meshes.push_back(total_body[organ_file_name][s.first]);
+               intersection_percnts.push_back(s.second);
+            } 
+            for (Mymesh &mesh: corridor_meshes) mesh.create_aabb_tree();
+            Surface_mesh corridor_generated = create_corridor(corridor_meshes, example_tissue, intersection_percnts, tolerance);
+            std::ofstream corridor_output(corridor_file_path);
+            corridor_output << corridor_generated;
+
+
+
+         }               
+         
+         
 
 
          // Create an Assimp importer
@@ -180,6 +198,15 @@ void parse_json(json::value const &jvalue, json::value &answer)
          } else {
             std::cerr << "Error loading the OFF file: " << importer.GetErrorString() << std::endl;
          }
+
+         auto time2 = std::chrono::high_resolution_clock::now();
+         std::chrono::duration<double> time_eclipse = time2 - time1;
+         if (result.size() == 2 or result.size() == 3) {
+            answer[U("parallel_time")] = json::value(time_eclipse.count());
+         } else {
+            answer[U("parallel_time")] = json::value(0);
+         }
+         
 
          //std::vector<Mymesh> meshes;
          //meshes.push_back(Mymesh(file_path_1));
@@ -287,7 +314,13 @@ void handle_request(http_request request, std::function<void(json::value const &
    // Create a file stream for the local file
    concurrency::streams::istream fileStream = concurrency::streams::file_stream<uint8_t>::open_istream(testFileName).get();
 
-   response.set_body(fileStream);
+   //send back file stream
+   //response.set_body(fileStream);
+
+   
+
+
+   response.set_body(answer);
 
    // if (answer != json::value::null())
    //    response.set_body(answer);
