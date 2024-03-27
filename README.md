@@ -10,7 +10,11 @@ A C++ library for http service for 3D corridor generation given a RUI Registrati
 
 ## Dependencies:
 For C++ libraries:
-1. CMake
+
+1. [Download CGAL 5.5.3](https://github.com/CGAL/cgal/releases/download/v5.5.3/CGAL-5.5.3.zip)
+    Extract the compressed file to the 'corridor_http_service' folder.
+
+2. CMake
     ```bash
     sudo apt-get install build-essential libssl-dev
     cd /tmp
@@ -21,32 +25,32 @@ For C++ libraries:
     make
     sudo make install
     ```
-2. Boost
+3. Boost
     ```bash
     sudo apt-get update
     sudo apt-get install libboost-all-dev
     ```
-3. GMP
+4. GMP
     ```bash
     sudo apt-get install libgmp-dev
     ```
-4. MPFR
+5. MPFR
     ```bash
     sudo apt-get install libmpfr-dev
     ```
-5. Eigen3
+6. Eigen3
     ```bash
     sudo apt install libeigen3-dev
     ```
-6. assimp
+7. assimp
     ```bash
     sudo apt-get install libassimp-dev
     ```
-7. cpprestsdk
+8. cpprestsdk
     ```bash
     sudo apt-get install libcpprest-dev
     ```
-8. [Download CGAL 5.5.3](https://github.com/CGAL/cgal/releases/tag/v5.5.3)
+
 
 
 ## Compilation

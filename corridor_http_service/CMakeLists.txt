@@ -3,7 +3,7 @@ project(HTTP_SERVICE)
 
 # set variables
 set(CMAKE_BUILD_TYPE "Release")
-set(CGAL_DIR "$ENV{HOME}/CGAL-5.5.3")
+set(CGAL_DIR "${CMAKE_SOURCE_DIR}/CGAL-5.5.3")
 
 find_package(CGAL REQUIRED)
 find_package(cpprestsdk REQUIRED)
