@@ -1,4 +1,0 @@
-/home/chenran/hra-corridor-generation/corridor_http_service/build/CMakeFiles/rebuild_cache.dir
-/home/chenran/hra-corridor-generation/corridor_http_service/build/CMakeFiles/edit_cache.dir
-/home/chenran/hra-corridor-generation/corridor_http_service/build/CMakeFiles/geometry.dir
-/home/chenran/hra-corridor-generation/corridor_http_service/build/CMakeFiles/server2.dir

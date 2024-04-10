@@ -151,14 +151,15 @@ void parse_json(json::value const &jvalue, json::value &answer)
          auto time1 = std::chrono::high_resolution_clock::now();
 
          std::string corridor_file_path = "output_corridor.off";
+         std::ofstream corridor_output(corridor_file_path);
 
          if (result.size() == 1) {
             //return mesh
-            std::ofstream corridor_output(corridor_file_path);
+            //std::ofstream corridor_output(corridor_file_path);
             corridor_output << total_body[organ_file_name][result[0].first].get_raw_mesh();
 
          } else if (result.size() == 0 or result.size() > 3) {
-            std::ofstream corridor_output(corridor_file_path);
+            //std::ofstream corridor_output(corridor_file_path);
 
             //return Tissue Block
             corridor_output << my_tissue.get_raw_mesh();
@@ -174,9 +175,10 @@ void parse_json(json::value const &jvalue, json::value &answer)
             Surface_mesh corridor_generated = create_corridor(corridor_meshes, example_tissue, intersection_percnts, tolerance);
 
             if (corridor_generated.number_of_vertices() == 0) {//if corridor point size is 0, return Tissue Block
+               //std::ofstream corridor_output(corridor_file_path);
                corridor_output << my_tissue.get_raw_mesh();
             } else {
-               std::ofstream corridor_output(corridor_file_path);
+               //std::ofstream corridor_output(corridor_file_path);
                corridor_output << corridor_generated;
             }
             

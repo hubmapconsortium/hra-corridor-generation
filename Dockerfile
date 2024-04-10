@@ -2,9 +2,16 @@ FROM ubuntu:20.04 AS build
 ARG DEBIAN_FRONTEND=noninteractive
 RUN apt -y update
 RUN apt install -y build-essential cmake libssl-dev libboost-all-dev libgmp-dev libmpfr-dev libeigen3-dev libassimp-dev libcpprest-dev
+RUN apt install -y wget unzip
 WORKDIR /usr/src/app/build
 COPY corridor_http_service ..
-RUN cmake .. && make
+#RUN mkdir /tmp
+RUN wget https://github.com/CGAL/cgal/releases/download/v5.5.3/CGAL-5.5.3.zip
+RUN unzip CGAL-5.5.3.zip -d /usr/src/app
+ENV HOME /usr/src/app
+RUN rm CGAL-5.5.3.zip
+RUN cmake .. 
+RUN make
 
 FROM ubuntu:20.04
 ARG DEBIAN_FRONTEND=noninteractive
