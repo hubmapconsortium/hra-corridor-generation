@@ -33,6 +33,9 @@ std::unordered_map<std::string, std::vector<Mymesh>> total_body;                
 std::unordered_map<std::string, SpatialEntity> mapping_node_spatial_entity;         // mapping from AS to its information in asct-b table 
 std::unordered_map<std::string, Placement> mapping_placement;                       // mapping from source plcement to target placement(including rotation, scaling, translation parameters)
 
+const std::string LOCAL_GLB = "corridor_output.glb";
+const std::string LOCAL_OFF = "corridor_output.off";
+
 //display json
 void display_json(
    json::value const & jvalue,
@@ -150,8 +153,7 @@ void parse_json(json::value const &jvalue, json::value &answer)
 
          auto time1 = std::chrono::high_resolution_clock::now();
 
-         std::string corridor_file_path = "output_corridor.off";
-         std::ofstream corridor_output(corridor_file_path);
+         std::ofstream corridor_output(LOCAL_OFF);
 
          if (result.size() == 1) {
             //return mesh
@@ -160,11 +162,8 @@ void parse_json(json::value const &jvalue, json::value &answer)
 
          } else if (result.size() == 0 or result.size() > 3) {
             //std::ofstream corridor_output(corridor_file_path);
-
             //return Tissue Block
             corridor_output << my_tissue.get_raw_mesh();
-
-
 
          } else {// TB intersects 2 or 3 meshes
             for (auto s: result) {
@@ -180,78 +179,35 @@ void parse_json(json::value const &jvalue, json::value &answer)
             } else {
                //std::ofstream corridor_output(corridor_file_path);
                corridor_output << corridor_generated;
-            }
-            
-
+            }            
          }               
+
 
          // Create an Assimp importer
          Assimp::Importer importer;
          // Read the OFF file
-         const aiScene* scene = importer.ReadFile(corridor_file_path, aiProcess_Triangulate); //| aiProcess_FlipUVs);
-
+         const aiScene* scene = importer.ReadFile(LOCAL_OFF, aiProcess_Triangulate); //| aiProcess_FlipUVs);
          if (scene) {
             // Create an Assimp exporter
             Assimp::Exporter exporter;
-
-            std::string glb_file_path = "corridor_output.glb";
-
+            //std::string glb_file_path = "corridor_output.glb";
             // Export the scene to GLB format
-            exporter.Export(scene, "glb2", glb_file_path); //aiProcess_Triangulate | aiProcess_FlipUVs);
-
-            std::cout << "Conversion successful. GLB file saved to: " << glb_file_path << std::endl;
+            exporter.Export(scene, "glb2", LOCAL_GLB); //aiProcess_Triangulate | aiProcess_FlipUVs);
+            std::cout << "Conversion successful. GLB file saved to: " << LOCAL_GLB << std::endl;
          } else {
             std::cerr << "Error loading the OFF file: " << importer.GetErrorString() << std::endl;
          }
-
          auto time2 = std::chrono::high_resolution_clock::now();
          std::chrono::duration<double> time_eclipse = time2 - time1;
-         if (result.size() == 2 or result.size() == 3) {
-            answer[U("parallel_time")] = json::value(time_eclipse.count());
-         } else {
-            answer[U("parallel_time")] = json::value(0);
-         }
+
+         // if (result.size() == 2 or result.size() == 3) {
+         //    answer[U("parallel_time")] = json::value(time_eclipse.count());
+         // } else {
+         //    answer[U("parallel_time")] = json::value(0);
+         // }
          
 
-         //std::vector<Mymesh> meshes;
-         //meshes.push_back(Mymesh(file_path_1));
-         //meshes.push_back(Mymesh(file_path_2));
 
-         //construct the response
-         // double tissue_volume = params["x_dimension"] * params["y_dimension"] * params["z_dimension"];
-         // for (int i = 0; i < result.size(); i++)
-         // {
-         //    auto res = result[i];
-         //    json::value AS;
-            
-         //    auto node_name = target_organ[res.first].label;
-         //    SpatialEntity &se = mapping_node_spatial_entity[node_name];
-         //    AS[U("organ")] = json::value::string(U(organ_file_name));
-         //    AS[U("node_name")] = json::value::string(U(node_name));
-         //    AS[U("label")] = json::value::string(U(se.label));
-         //    AS[U("representation_of")] = json::value::string(U(se.representation_of));
-         //    AS[U("id")] = json::value::string("http://purl.org/ccf/latest/ccf.owl" + se.source_spatial_entity + "_" + node_name);
-
-         //    AS[U("tissue_volume")] = json::value(tissue_volume);
-         //    AS[U("AS_volume")] = json::value(target_organ[res.first].volume);
-            
-         //    if (res.second < 0)  
-         //    {
-         //       AS[U("percentage_of_tissue_block")] = json::value(0);
-         //       AS[U("is_closed")] = json::value(false);
-         //       AS[U("percentage_of_AS")] = json::value(0);
-         //       AS[U("intersection_volume")] = json::value(0);
-         //    }
-         //    else
-         //    {
-         //       AS[U("percentage_of_tissue_block")] = json::value(res.second);
-         //       AS[U("intersection_volume")] = json::value(res.second * tissue_volume);
-         //       AS[U("percentage_of_AS")] = json::value(res.second * tissue_volume / target_organ[res.first].volume);
-         //       AS[U("is_closed")] = json::value(true);
-         //    }
-            
-         //    answer[i] = AS;
-         // }
 
    }
    catch(...)
@@ -314,18 +270,15 @@ void handle_request(http_request request, std::function<void(json::value const &
    http_response response(status_codes::OK);
    response.headers().add(U("Access-Control-Allow-Origin"), U("*"));
 
-   utility::string_t testFileName = "corridor_output.glb";
+   //utility::string_t testFileName = "corridor_output.glb";
 
    // Create a file stream for the local file
-   concurrency::streams::istream fileStream = concurrency::streams::file_stream<uint8_t>::open_istream(testFileName).get();
-
+   concurrency::streams::istream fileStream = concurrency::streams::file_stream<uint8_t>::open_istream(LOCAL_GLB).get();
    //send back file stream
-   //response.set_body(fileStream);
+   response.set_body(fileStream);
 
    
-
-
-   response.set_body(answer);
+   //response.set_body(answer);
 
    // if (answer != json::value::null())
    //    response.set_body(answer);
@@ -387,19 +340,19 @@ int main(int argc, char **argv)
 
    //create corridor glb file
    // Specify the path and name of the GLB file
-   const std::string localfilename = "corridor_output.glb";
+   //const std::string LOCAL_GLB = "corridor_output.glb";
 
    // Create an ofstream object and open the GLB file
-   std::ofstream outfile(localfilename, std::ios::binary);
+   std::ofstream outfile(LOCAL_GLB, std::ios::binary);
 
    // Check if the file is successfully opened
    if (outfile.is_open()) {
-      std::cout << "GLB file created successfully: " << localfilename << std::endl;
+      std::cout << "Local GLB file created successfully: " << LOCAL_GLB << std::endl;
 
       // Close the GLB file  
       outfile.close();
    } else {
-      std::cerr << "Error creating GLB file: " << localfilename << std::endl;
+      std::cerr << "Error creating local GLB file: " << LOCAL_GLB << std::endl;
    }
 
    //test assimp
