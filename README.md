@@ -59,7 +59,7 @@ We use CMake to configure the program with third-party dependencies and generate
 
 1. for collision detection and volume computation:
     ```bash
-    cd $corridor_http_service
+    cd $src
     mkdir build
     cd build
     cmake ..
