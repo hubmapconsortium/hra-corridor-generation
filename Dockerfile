@@ -9,7 +9,6 @@ COPY src ..
 RUN wget https://github.com/CGAL/cgal/releases/download/v5.5.3/CGAL-5.5.3.zip
 RUN unzip CGAL-5.5.3.zip -d /usr/src/app
 ENV HOME /usr/src/app
-ENV CPU_GPU="CPU"
 RUN rm CGAL-5.5.3.zip
 RUN cmake .. 
 RUN make
@@ -21,6 +20,7 @@ RUN apt install -y libssl-dev libboost-all-dev libgmp-dev libmpfr-dev libeigen3-
 WORKDIR /usr/src/app
 COPY --from=build /usr/src/app/build/corridor_api .
 COPY model model
+ENV CPU_GPU="CPU"
 COPY server.sh .
 
 ENV PORT 8080
