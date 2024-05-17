@@ -1,10 +1,7 @@
-#include "corridor.h"
-#include <cmath>
+#include "corridor_cpu.h"
 #include <omp.h>
-#include <iostream>
 #include <sys/time.h>
 using namespace std;
-   
 
 Mytissue::Mytissue(double c_x, double c_y, double c_z, double d_x, double d_y, double d_z)
 :Mymesh(c_x, c_y, c_z, d_x, d_y, d_z),
@@ -22,6 +19,43 @@ std::vector<Point> &Mytissue::get_points()
     return this->points;
 }
 
+
+// Surface_mesh Mytissue::create_mesh()
+// {
+
+//     double min_x = center_x - dimension_x/2, min_y = center_y - dimension_y/2, min_z = center_z - dimension_z/2;
+//     double max_x = center_x + dimension_x/2, max_y = center_y + dimension_y/2, max_z = center_z + dimension_z/2;
+
+//     Point v000(min_x, min_y, min_z);
+//     Point v100(max_x, min_y, min_z);
+//     Point v010(min_x, max_y, min_z);
+//     Point v001(min_x, min_y, max_z);
+//     Point v110(max_x, max_y, min_z);
+//     Point v101(max_x, min_y, max_z);
+//     Point v011(min_x, max_y, max_z);
+//     Point v111(max_x, max_y, max_z);
+
+//     std::vector<Point> vertices = {v000, v100, v110, v010, v001, v101, v111, v011};
+//     std::vector<vertex_descriptor> vd;
+
+//     Surface_mesh tissue_mesh;
+//     for (auto &p: vertices)
+//     {
+//         vertex_descriptor u = tissue_mesh.add_vertex(p);
+//         vd.push_back(u);
+//     } 
+
+//     tissue_mesh.add_face(vd[3], vd[2], vd[1], vd[0]);
+//     tissue_mesh.add_face(vd[4], vd[5], vd[6], vd[7]);
+//     tissue_mesh.add_face(vd[4], vd[7], vd[3], vd[0]);
+//     tissue_mesh.add_face(vd[1], vd[2], vd[6], vd[5]);
+//     tissue_mesh.add_face(vd[0], vd[1], vd[5], vd[4]);
+//     tissue_mesh.add_face(vd[2], vd[3], vd[7], vd[6]);
+
+//     return tissue_mesh;
+
+
+// }
 
 std::vector<Point> &Mytissue::generate_points(int resolution=10)
 {
@@ -45,236 +79,6 @@ std::vector<Point> &Mytissue::generate_points(int resolution=10)
     
     return points;
 }
-
-
-
-
-// //original tissue block obtained from json file
-// OriginTissue::OriginTissue(double c_x, double c_y, double c_z, double d_x, double d_y, double d_z)
-// :Mytissue(c_x, c_y, c_z, d_x, d_y, d_z),
-// origin_x(c_x), origin_y(c_y), origin_z(c_z), dimension_x(d_x), dimension_y(d_y), dimension_z(d_z)
-// {
-
-//     create_aabb_tree();
-//     generate_points(10);
-
-// }
-
-// std::vector<Point> &OriginTissue::get_points()
-// {
-//     return this->points;
-// }
-
-// //apply translation along x, y and z axes
-// // void OriginTissue::applyTranslation(double& x, double& y, double& z, double dx, double dy, double dz)
-// // {
-// //     x = x + dx;
-// //     y = y + dy;
-// //     z = z + dz;
-// // }
-
-// // //apply Euler rotation around x, y and z axes
-// // void OriginTissue::applyEulerRotations(double& x, double& y, double& z, double angleX, double angleY, double angleZ) 
-// // {
-
-// //     double radianX = angleX * (M_PI / 180.0);
-// //     double radianY = angleY * (M_PI / 180.0);
-// //     double radianZ = angleZ * (M_PI / 180.0);
-
-
-// //     // Apply x-rotation
-// //     double tempY = y;
-// //     y = cos(radianX) * y - sin(radianX) * z;
-// //     z = sin(radianX) * tempY + cos(radianX) * z;
-
-// //     // Apply y-rotation
-// //     double tempX = x;
-// //     x = cos(radianY) * x + sin(radianY) * z;
-// //     z = -sin(radianY) * tempX + cos(radianY) * z;
-
-// //     // Apply z-rotation
-// //     tempX = x;
-// //     x = cos(radianZ) * x - sin(radianZ) * y;
-// //     y = sin(radianZ) * tempX + cos(radianZ) * y;
-
-// // }
-
-// // void OriginTissue::setNumOfPoints(int x, int y, int z)
-// // {
-// //     numOfPoints = x * y * z;
-// // }
-
-// std::vector<Point> &OriginTissue::generate_points(int resolution=10)
-// {   
-//     //setNumOfPoints(resolution, resolution, resolution);
-//     std::cout << " OriginTissue::generate_points " << std::endl;
-
-//     double min_x = -dimension_x/2, min_y = -dimension_y/2, min_z = -dimension_z/2;
-//     double max_x = dimension_x/2, max_y = dimension_y/2, max_z = dimension_z/2; 
-//     double delta_x = (max_x - min_x) / resolution, delta_y = (max_y - min_y) / resolution, delta_z = (max_z - min_z) / resolution;    
-  
-//     Eigen::Vector3d origin(origin_x, origin_y, origin_z);
-
-//     Eigen::MatrixXd R_x(3, 3);
-//     Eigen::MatrixXd R_y(3, 3);
-//     Eigen::MatrixXd R_z(3, 3);
-
-//     double radius_x = x_rotation * PI / 180;
-//     double radius_y = y_rotation * PI / 180;
-//     double radius_z = z_rotation * PI / 180;
-//     R_x << 1.0, 0.0, 0.0, 
-//         0.0, cos(radius_x), -sin(radius_x),
-//         0.0, sin(radius_x), cos(radius_x);
-
-//     R_y << cos(radius_y), 0.0, sin(radius_y),
-//         0.0, 1.0, 0.0,
-//         -sin(radius_y), 0.0, cos(radius_y);
-
-//     R_z << cos(radius_z), -sin(radius_z), 0.0, 
-//         sin(radius_z), cos(radius_z), 0.0,
-//         0.0, 0.0, 1.0;
-
-//     Eigen::MatrixXd rotationMatrix = R_x * R_y * R_z;
-//     Eigen::Vector3d translation(translation_x, translation_y, translation_z);
-
-//     double center_x, center_y, center_z;
-//     for (int i = 0; i < resolution; i++)
-//         for (int j = 0; j < resolution; j++)
-//             for (int k = 0; k < resolution; k++)
-//             {
-//                 center_x = min_x + (i + 0.5) * delta_x;
-//                 center_y = min_y + (j + 0.5) * delta_y;
-//                 center_z = min_z + (k + 0.5) * delta_z;
-                
-//                 //apply translation along x, y and z axes
-//                 //applyTranslation(c_x, c_y, c_z, translate_x, translate_y, translate_z);
-//                 //apply Euler rotation around x, y and z axes
-//                 //applyEulerRotations(c_x, c_y, c_z, alpha, beta, gamma);    
-
-//                 Eigen::Vector3d temp_vec(center_x, center_y, center_z);
-//                 temp_vec = (rotationMatrix * temp_vec + T)/1000.0 + origin;
-
-//                 Point p(temp_vec(0), temp_vec(1), temp_vec(2));
-//                 points.push_back(p); 
-//             }
-    
-//     return points;
-// }
-
-// // void OriginTissue::setTranslationDistanceXYZ(double distance_x, double distance_y, double distance_z)
-// // {
-// //     translate_x = distance_x;
-// //     translate_y = distance_y;
-// //     translate_z = distance_z;
-// // }
-
-// // void OriginTissue::setRotationAngleXYZ(double angle_x, double angle_y, double angle_z)
-// // {
-// //     alpha = angle_x; 
-// //     beta = angle_y; 
-// //     gamma = angle_z;
-// // }
-
-
-
-
-
-
-
-// //computer intersection percentage between original tissue block and a list of meshes.
-// std::vector<double> compute_intersection_percnt_for_originTissue_meshes(std::vector<Mymesh> &meshes, OriginTissue &originTissueBlock) 
-// {
-
-//     double tissue_d_x = originTissueBlock.dimension_x;
-//     double tissue_d_y = originTissueBlock.dimension_y;
-//     double tissue_d_z = originTissueBlock.dimension_z;
-
-//     //calculate tissue block volume
-//     //double tbv = tissue_d_x * tissue_d_y * tissue_d_z;
-
-//     //find MBB for tissue block
-//     CGAL::Bbox_3 tissueBBox = PMP::bbox(originTissueBlock.get_raw_mesh());
-
-//     //std::cout << " test 1 "  << std::endl;
-
-//     std::vector<double> intersect_percnt;
-
-//     //calculate if the bbox of mesh intersects the bbox of tissue for each mesh.
-//     for (int i = 0; i < meshes.size(); i++) {
-
-//         std::cout << i << std::endl << std::endl;
-
-//         //std::cout << " test 2 "  << std::endl;
-
-//         CGAL::Bbox_3 meshBBox = PMP::bbox(meshes[i].get_raw_mesh());
-
-//         //std::cout << " test 3 "  << std::endl;
-
-//         double lcr1 = meshBBox.xmin();
-//         double lcr2 = tissueBBox.xmax();
-//         double lcr3 = meshBBox.xmax();
-//         double lcr4 = tissueBBox.xmin();
-
-//         double lcr11 = meshBBox.ymin();
-//         double lcr21 = tissueBBox.ymax();
-//         double lcr31 = meshBBox.ymax();
-//         double lcr41 = tissueBBox.ymin();
-
-//         double lcr111 = meshBBox.zmin();
-//         double lcr211 = tissueBBox.zmax();
-//         double lcr311 = meshBBox.zmax();
-//         double lcr411 = tissueBBox.zmin();
-
-
-
-//         //std::cout << " test 4 "  << std::endl;
-
-        
-
-//         bool intersectX = (meshBBox.xmin() <= tissueBBox.xmax()) && (meshBBox.xmax() >= tissueBBox.xmin());
-//         bool intersectY = (meshBBox.ymin() <= tissueBBox.ymax()) && (meshBBox.ymax() >= tissueBBox.ymin());
-//         bool intersectZ = (meshBBox.zmin() <= tissueBBox.zmax()) && (meshBBox.zmax() >= tissueBBox.zmin());
-//         //std::cout << " test 5 "  << std::endl;
-//     //     // If there is an intersection along all three axes, the bounding boxes intersect
-//         if (intersectX && intersectY && intersectZ) {
-            
-//             //calculate intersection percentages
-//             //cut tissue block into 1000 small boxes, use center point to represent each small box,
-//             //for each center point, check if it is inside certain mesh,
-//             //intersection percentage = Number of points inside / total number of points
-//             std::cout << " BBX intersect "  << std::endl;
-//             double intersection_volume = compute_intersection_volume(meshes[i], originTissueBlock);
-
-//             std::cout << " intersection_volume: " << intersection_volume << std::endl;
-//             //intersect_percnt[i] = intersection_volume / (tissue_d_x * tissue_d_y * tissue_d_z);
-//             //std::cout << " test 6 "  << std::endl;
-//             intersect_percnt.push_back(intersection_volume / (tissue_d_x * tissue_d_y * tissue_d_z));
-//             //std::cout << " test 7 "  << std::endl;
-
-//         } else {    //BBX do not intersect
-//             std::cout << " BBX do not intersect "  << std::endl;
-//             intersect_percnt.push_back(0);
-//             //std::cout << " test 9 "  << std::endl;
-//         }
-        
-//     }
-
-//     return intersect_percnt;
-// }
-
-
-
-
-
-
-
- 
-
-
-
-
-
-
 
 
 std::vector<Point> find_all_locations(Mymesh &my_mesh, Mytissue &example_tissue, double intersection_percentage, double tolerance)
@@ -340,6 +144,91 @@ double generate_pertubation(double step)
 {
     return step * ((double)rand()/RAND_MAX * 2.0 - 1.0);
 }
+
+// std::vector<Point> create_point_cloud_corridor_for_multiple_AS(std::vector<Mymesh> &meshes, Mytissue &example_tissue, std::vector<double> &intersection_percnts, double tolerance)
+// {
+
+//     std::vector<Point> center_path;
+//     std::vector<Point> point_cloud;
+
+//     double intersect_x_min = -1e10, intersect_y_min = -1e10, intersect_z_min = -1e10;
+//     double intersect_x_max = 1e10, intersect_y_max = 1e10, intersect_z_max = 1e10;  
+
+//     // double step_x = example_tissue.dimension_x / 4.9;
+//     // double step_y = example_tissue.dimension_y / 4.9;
+//     // double step_z = example_tissue.dimension_z / 4.9;
+
+//     double example_d_x = example_tissue.dimension_x;
+//     double example_d_y = example_tissue.dimension_y;
+//     double example_d_z = example_tissue.dimension_z;
+
+//     double tbv = example_d_x * example_d_y * example_d_z;
+
+//     for (Mymesh &mesh: meshes)
+//     {
+//         CGAL::Bbox_3 bbox = PMP::bbox(mesh.get_raw_mesh());
+//         intersect_x_min = std::max(intersect_x_min, bbox.xmin());
+//         intersect_y_min = std::max(intersect_y_min, bbox.ymin());
+//         intersect_z_min = std::max(intersect_z_min, bbox.zmin());
+
+//         intersect_x_max = std::min(intersect_x_max, bbox.xmax());
+//         intersect_y_max = std::min(intersect_y_max, bbox.ymax());
+//         intersect_z_max = std::min(intersect_z_max, bbox.zmax());
+
+//     }
+
+//     double step_x = (intersect_x_max - intersect_x_min + example_d_x) / 20.0;
+//     double step_y = (intersect_y_max - intersect_y_min + example_d_y) / 20.0;
+//     double step_z = (intersect_z_max - intersect_z_min + example_d_z) / 20.0;
+
+//     std::cout << "min x, y, z: " << intersect_x_min << " " << intersect_y_min << " " << intersect_z_min << std::endl;
+//     std::cout << "max x, y, z: " << intersect_x_max << " " << intersect_y_max << " " << intersect_z_max << std::endl;
+//     std::cout << "step size: " << step_x << " " << step_y << " " << step_z << std::endl;
+    
+//     for (double c_x = intersect_x_min - example_d_x / 2; c_x < intersect_x_max + example_d_x / 2; c_x += step_x)
+//         for (double c_y = intersect_y_min - example_d_y / 2; c_y < intersect_y_max + example_d_y / 2; c_y += step_y)
+//             for (double c_z = intersect_z_min - example_d_z / 2; c_z < intersect_z_max + example_d_z / 2; c_z += step_z)
+//             {
+//                 // std::cout << c_x << " " << c_y << " " << c_z << std::endl;
+//                 Mytissue cur_tissue(c_x, c_y, c_z, example_d_x, example_d_y, example_d_z);
+                
+//                 bool is_in_corridor = true;
+//                 for (int i = 0; i < meshes.size(); i++)
+//                 {
+//                     Mymesh &mesh = meshes[i];
+//                     double example_intersection_volume = tbv * intersection_percnts[i];
+
+//                     double intersection_volume = compute_intersection_volume(mesh, cur_tissue);
+//                     // std::cout << i << " example intersection volume: " << example_intersection_volume << " " << intersection_volume << std::endl;
+//                     if (std::abs(intersection_volume - example_intersection_volume) > tolerance * example_intersection_volume)
+//                     {
+//                         is_in_corridor = false;
+//                         break;
+//                     }
+
+//                 }
+
+//                 if (is_in_corridor)
+//                 {
+//                     center_path.push_back(Point(c_x, c_y, c_z));
+//                     std::cout << generate_pertubation(step_x) << " " << generate_pertubation(step_y) << " " << generate_pertubation(step_z) << std::endl;
+//                     point_cloud.push_back(Point(c_x - example_d_x / 2 + generate_pertubation(step_x), c_y - example_d_y / 2 + generate_pertubation(step_y), c_z - example_d_z / 2 + generate_pertubation(step_z)));
+//                     point_cloud.push_back(Point(c_x + example_d_x / 2 + generate_pertubation(step_x), c_y - example_d_y / 2 + generate_pertubation(step_y), c_z - example_d_z / 2 + generate_pertubation(step_z)));
+//                     point_cloud.push_back(Point(c_x - example_d_x / 2 + generate_pertubation(step_x), c_y + example_d_y / 2 + generate_pertubation(step_y), c_z - example_d_z / 2 + generate_pertubation(step_z)));
+//                     point_cloud.push_back(Point(c_x + example_d_x / 2 + generate_pertubation(step_x), c_y + example_d_y / 2 + generate_pertubation(step_y), c_z - example_d_z / 2 + generate_pertubation(step_z)));
+//                     point_cloud.push_back(Point(c_x - example_d_x / 2 + generate_pertubation(step_x), c_y - example_d_y / 2 + generate_pertubation(step_y), c_z + example_d_z / 2 + generate_pertubation(step_z)));
+//                     point_cloud.push_back(Point(c_x + example_d_x / 2 + generate_pertubation(step_x), c_y - example_d_y / 2 + generate_pertubation(step_y), c_z + example_d_z / 2 + generate_pertubation(step_z)));
+//                     point_cloud.push_back(Point(c_x - example_d_x / 2 + generate_pertubation(step_x), c_y + example_d_y / 2 + generate_pertubation(step_y), c_z + example_d_z / 2 + generate_pertubation(step_z)));
+//                     point_cloud.push_back(Point(c_x + example_d_x / 2 + generate_pertubation(step_x), c_y + example_d_y / 2 + generate_pertubation(step_y), c_z + example_d_z / 2 + generate_pertubation(step_z)));
+
+//                 }
+
+//             }
+
+
+//     return point_cloud;
+
+// }
 
 std::vector<Point> create_point_cloud_corridor_for_multiple_AS(std::vector<Mymesh> &meshes, Mytissue &example_tissue, std::vector<double> &intersection_percnts, double tolerance)
 {
@@ -460,6 +349,11 @@ std::vector<Point> create_point_cloud_corridor_for_multiple_AS(std::vector<Mymes
     return point_cloud;
 
 }
+
+
+
+
+
 
 //overload: create point cloud based on the collision detection result
 std::vector<Point> create_point_cloud_corridor_for_multiple_AS(std::vector<Mymesh> &organ, Mytissue &example_tissue, std::vector<std::pair<int, double>> &result, double tolerance)
@@ -623,56 +517,9 @@ double compute_intersection_volume(Mymesh &AS, Mytissue &tissue)
         if (is_contain_1) percentage = 1.0;
         else if (is_contain_2) percentage = AS.percentage_points_inside(tissue.get_points());
     }
-    //std::cout << " tissue.dimension_xyz : " << tissue.dimension_x << "---" << tissue.dimension_y << "---" << tissue.dimension_z << std::endl;
-    //std::cout << " percentage : " << percentage << std::endl;
+
     double volume = percentage * tissue.dimension_x * tissue.dimension_y * tissue.dimension_z;
     
     return volume;
     
 }
-
-/*
-double compute_intersection_volume_serial(Mymesh &AS, Mytissue &tissue)
-{
-
-    auto aabbtree_AS = AS.get_aabb_tree();
-    auto aabbtree_tissue = tissue.get_aabb_tree();
-
-    double percentage = 0.0;
-    if (aabbtree_AS->do_intersect(*aabbtree_tissue))
-    {
-        //run 1000 times
-        percentage = AS.percentage_points_inside_serial(tissue.get_points());
-    }
-    else
-    {
-        Surface_mesh &tissue_raw_mesh = tissue.get_raw_mesh();       
-        // the tissue block is wholely inside the anatomical structure. 
-        bool is_contain_1 = true;
-        // break for loop
-        for (auto vd: tissue_raw_mesh.vertices())
-        {
-            Point p = tissue_raw_mesh.point(vd);
-            if (!AS.point_inside(p)) is_contain_1 = false;
-            break;
-        }
-
-        // the anatomical structure is wholely inside the tissue block, still use the voxel-based algorithm, can be simplified to use the volume of the anatomical structure. 
-        bool is_contain_2 = true;
-        Surface_mesh &AS_raw_mesh = AS.get_raw_mesh();
-
-        for (auto vd: AS_raw_mesh.vertices())
-        {
-            Point p = AS_raw_mesh.point(vd);
-
-            if (!tissue.point_inside(p)) is_contain_2 = false;
-            break;        
-        }
-        if (is_contain_1) percentage = 1.0;
-        else if (is_contain_2) percentage = AS.percentage_points_inside_serial(tissue.get_points());
-    }
-    double volume = percentage * tissue.dimension_x * tissue.dimension_y * tissue.dimension_z;
-    
-    return volume;
-    
-}*/

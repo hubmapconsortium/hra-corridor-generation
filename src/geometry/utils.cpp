@@ -263,9 +263,6 @@ void load_ASCT_B(const std::string &file_path, std::unordered_map<std::string, s
 
     }
 
-
-    
-
 }
 
 std::string organ_split(const std::string &url)
@@ -281,4 +278,107 @@ std::string organ_split(const std::string &url)
     size_t start = url.find("#"); 
     return url.substr(start);
 
+}
+
+
+
+
+void output_corridor(Surface_mesh &mesh, std::string rui_location_id, std::string output_corridor_dir)
+{
+    if (!fs::exists(output_corridor_dir)) fs::create_directory(output_corridor_dir);
+    size_t start = rui_location_id.find_last_of('/') + 1;
+    std::string abs_file_path = output_corridor_dir + '/' + rui_location_id.substr(start) + ".off";
+    CGAL::IO::write_polygon_mesh(abs_file_path, mesh, CGAL::parameters::stream_precision(17));            
+
+}
+
+
+std::string output_corridor_glb(Surface_mesh &mesh, std::string rui_location_id, std::string output_corridor_dir)
+{
+    if (!fs::exists(output_corridor_dir)) fs::create_directory(output_corridor_dir);
+    size_t start = rui_location_id.find_last_of('/') + 1;
+    std::string off_file_path = output_corridor_dir + '/' + rui_location_id.substr(start) + ".off";
+    CGAL::IO::write_polygon_mesh(off_file_path, mesh, CGAL::parameters::stream_precision(17));
+
+    std::string glb_file_path = output_corridor_dir + '/' + rui_location_id.substr(start) + ".glb";
+    // execute python script for the format conversion
+    std::string command = "python " + off_file_path + " " + glb_file_path + " ./scripts/glb_converter.py";
+    system(command.c_str());
+
+    // generate binary string
+    std::stringstream buffer;
+    if (fs::exists(glb_file_path))
+    {
+        std::ifstream if_glb(glb_file_path);
+        buffer << if_glb.rdbuf();
+    }       
+
+    return buffer.str();
+
+}
+
+std::string output_corridor_glb(Surface_mesh &corridor_mesh, std::string rui_location_id)
+{
+
+    std::string output_corridor_dir = "./tmp_corridors";
+    if (!fs::exists(output_corridor_dir)) fs::create_directory(output_corridor_dir);
+    size_t start = rui_location_id.find_last_of('/') + 1;
+    std::string off_file_path = output_corridor_dir + '/' + rui_location_id.substr(start) + ".off";
+    std::ofstream corridor_output(off_file_path);
+    corridor_output << corridor_mesh;
+
+     // Create an Assimp importer
+    Assimp::Importer importer;
+    // Read the OFF file
+    const aiScene* scene = importer.ReadFile(off_file_path, aiProcess_Triangulate); //| aiProcess_FlipUVs);
+    std::stringstream buffer;
+    
+    if (scene) {
+        // Create an Assimp exporter
+        Assimp::Exporter exporter;
+        std::string glb_file_path = output_corridor_dir + '/' + rui_location_id.substr(start) + ".glb";
+        // Export the scene to GLB format
+        exporter.Export(scene, "glb2", glb_file_path); //aiProcess_Triangulate | aiProcess_FlipUVs);
+
+        // generate binary string
+        if (fs::exists(glb_file_path))
+        {
+            std::ifstream if_glb(glb_file_path);
+            buffer << if_glb.rdbuf();
+            if_glb.close();
+        }
+
+        std::cout << "Conversion successful. GLB file saved to: " << glb_file_path << std::endl;
+
+        if ((std::remove(off_file_path.c_str()) != 0) || (std::remove(glb_file_path.c_str()) != 0)) {
+            std::cerr << "Error deleting file: " << glb_file_path << std::endl;
+            //return 1;
+        } else {
+            std::cout << "File successfully deleted." << std::endl;
+
+    }
+    } else {
+        std::cerr << "Error loading the OFF file: " << importer.GetErrorString() << std::endl;
+    }       
+
+    return buffer.str();
+
+}
+
+void comparison_CPU_GPU(std::vector<Point> &CPU_points, std::vector<Point> &GPU_points)
+{
+    if (CPU_points.size() != GPU_points.size()) 
+    {
+        std::cout << "[size] GPU computation is not the same with CPU! CPU size: " << CPU_points.size() << " GPU size: " << GPU_points.size() << std::endl;
+    }
+    // for (int i = 0; i < CPU_points.size(); i++)
+    // {
+    //     auto &p1 = CPU_points[i];
+    //     auto &p2 = GPU_points[i];
+
+    //     if (std::abs(p1[0] - p2[0]) > 1e-6 || std::abs(p1[1] - p2[1]) > 1e-6 || std::abs(p1[2] - p2[2]) > 1e-6)
+    //     {
+    //         std::cout << "[points] GPU computation is not the same with CPU!" << std::endl;
+    //     } 
+    // }
 }

@@ -6,7 +6,7 @@ import requests
 import urllib.request
 import csv
 
-collision_detection_url = 'http://0.0.0.0:12345/get-corridor'
+collision_detection_url = 'http://0.0.0.0:8080/get-corridor'
 enriched_rui_location_url = 'https://cdn.humanatlas.io/digital-objects/ds-graph/hra-pop-full/v0.5.1/assets/full-dataset-graph.jsonld'
                             
 responses = []

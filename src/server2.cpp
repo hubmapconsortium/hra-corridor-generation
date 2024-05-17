@@ -1,7 +1,8 @@
 #include "algo.h"
 #include "utils.h"
 #include "json_utils.cpp"
-#include "corridor.h"
+#include "corridor_cpu.h"
+#include "corridor.cuh"
 
 #include <chrono>
 
@@ -20,10 +21,7 @@ using namespace web::http::experimental::listener;
 #include <unordered_map>
 #include <set>
 #include <string>
-#include <assimp/Importer.hpp>
-#include <assimp/Exporter.hpp>
-#include <assimp/scene.h>
-#include <assimp/postprocess.h>
+
 
 //global variables
 std::map<utility::string_t, utility::string_t> dictionary;
@@ -32,9 +30,44 @@ std::unordered_map<std::string, std::string> mapping;                           
 std::unordered_map<std::string, std::vector<Mymesh>> total_body;                    //mapping from organ name(glb file name) to vector of meshes of a certain organ
 std::unordered_map<std::string, SpatialEntity> mapping_node_spatial_entity;         // mapping from AS to its information in asct-b table 
 std::unordered_map<std::string, Placement> mapping_placement;                       // mapping from source plcement to target placement(including rotation, scaling, translation parameters)
+std::unordered_map<std::string, Organ> total_body_gpu;                              // gpu version of total_body: key is organ name, value is Organ object
 
+std::string CPU_GPU = "CPU"; 
 const std::string LOCAL_GLB = "corridor_output.glb";
 const std::string LOCAL_OFF = "corridor_output.off";
+
+// Point format convertion from gpu (float3) to cpu (Point in CGAL)
+std::vector<Point> convert_point_gpu_to_cpu(ResultContainer &result_container, AATissue &example_tissue)
+{
+   std::vector<Point> point_cloud;
+   float3* p_corridor_arr = result_container.corridor_array;
+   bool* p_point_is_in_corridor_array = result_container.point_is_in_corridor_array;
+   
+   float example_d_x = example_tissue.dimension_x;
+   float example_d_y = example_tissue.dimension_y;
+   float example_d_z = example_tissue.dimension_z;
+
+   float c_x, c_y, c_z;
+   for (int i = 0; i < 40*40*40; i++) {
+      if (p_point_is_in_corridor_array[i])
+      {
+         float3 p = p_corridor_arr[i];
+         c_x = p.x;
+         c_y = p.y;
+         c_z = p.z;
+         point_cloud.push_back(Point(c_x - example_d_x / 2, c_y - example_d_y / 2, c_z - example_d_z / 2));
+         point_cloud.push_back(Point(c_x + example_d_x / 2, c_y - example_d_y / 2, c_z - example_d_z / 2));
+         point_cloud.push_back(Point(c_x - example_d_x / 2, c_y + example_d_y / 2, c_z - example_d_z / 2));
+         point_cloud.push_back(Point(c_x + example_d_x / 2, c_y + example_d_y / 2, c_z - example_d_z / 2));
+         point_cloud.push_back(Point(c_x - example_d_x / 2, c_y - example_d_y / 2, c_z + example_d_z / 2));
+         point_cloud.push_back(Point(c_x + example_d_x / 2, c_y - example_d_y / 2, c_z + example_d_z / 2));
+         point_cloud.push_back(Point(c_x - example_d_x / 2, c_y + example_d_y / 2, c_z + example_d_z / 2));
+         point_cloud.push_back(Point(c_x + example_d_x / 2, c_y + example_d_y / 2, c_z + example_d_z / 2));
+
+      }
+   }
+   return point_cloud;
+}
 
 //display json
 void display_json(
@@ -83,13 +116,6 @@ void parse_json(json::value const &jvalue, json::value &answer)
          }
 
          auto reference_organ_name = organ_split(target); 
-         
-         // only test for kidneys, will test other organs soon.
-         // if (!(reference_organ_name == "#VHFLeftKidney" || reference_organ_name == "#VHFRightKidney" || reference_organ_name == "#VHMLeftKidney" || reference_organ_name == "#VHMRightKidney"))
-         // {
-         //    answer[U("error_message")] = json::value::string(U("only test tissue blocks in kidneys"));
-         //    return;
-         // }
 
          // test for all organs
          if (mapping.find(reference_organ_name) == mapping.end()) 
@@ -112,15 +138,7 @@ void parse_json(json::value const &jvalue, json::value &answer)
          tissue_transform(params, tissue_mesh, points, 10);
 
          Mymesh my_tissue(tissue_mesh);
-
-         // for test
-         // std::ofstream tissue_mesh_off("./tissue_blocks/" + tissue_output_path);
-         // tissue_mesh_off << tissue_mesh;
-         // tissue_mesh_off.close();
-
-
          my_tissue.create_aabb_tree();
-
 
          //core function
          auto t1 = std::chrono::high_resolution_clock::now();
@@ -143,71 +161,134 @@ void parse_json(json::value const &jvalue, json::value &answer)
          std::cout << "total_body[organ_file_name] length: " << total_body[organ_file_name].size() << std::endl;
 
 
+         if (CPU_GPU == "CPU") {
+            //using CPU parallel algorithm
+            //create corridor-CPU  
+            std::vector<Mymesh> corridor_meshes;
+            std::vector<double> intersection_percnts;
+            Mytissue example_tissue(0.0, 0.0, 0.0, params["x_dimension"]/1000, params["y_dimension"]/1000, params["z_dimension"]/1000);
+            double tolerance = 0.05;
 
-         //create corridor   
-         std::vector<Mymesh> corridor_meshes;
-         std::vector<double> intersection_percnts;
-         Mytissue example_tissue(0.0, 0.0, 0.0, params["x_dimension"]/1000, params["y_dimension"]/1000, params["z_dimension"]/1000);
-         double tolerance = 0.05;
 
+            auto time1 = std::chrono::high_resolution_clock::now();
 
-         auto time1 = std::chrono::high_resolution_clock::now();
+            std::ofstream corridor_output(LOCAL_OFF);
 
-         std::ofstream corridor_output(LOCAL_OFF);
-
-         if (result.size() == 1) {
-            //return mesh
-            //std::ofstream corridor_output(corridor_file_path);
-            corridor_output << total_body[organ_file_name][result[0].first].get_raw_mesh();
-
-         } else if (result.size() == 0 or result.size() > 3) {
-            //std::ofstream corridor_output(corridor_file_path);
-            //return Tissue Block
-            corridor_output << my_tissue.get_raw_mesh();
-
-         } else {// TB intersects 2 or 3 meshes
-            for (auto s: result) {
-               corridor_meshes.push_back(total_body[organ_file_name][s.first]);
-               intersection_percnts.push_back(s.second);
-            } 
-            for (Mymesh &mesh: corridor_meshes) mesh.create_aabb_tree();
-            Surface_mesh corridor_generated = create_corridor(corridor_meshes, example_tissue, intersection_percnts, tolerance);
-
-            if (corridor_generated.number_of_vertices() == 0) {//if corridor point size is 0, return Tissue Block
+            if (result.size() == 1) {
+               //return mesh
                //std::ofstream corridor_output(corridor_file_path);
+               corridor_output << total_body[organ_file_name][result[0].first].get_raw_mesh();
+
+            } else if (result.size() == 0 or result.size() > 3) {
+               //std::ofstream corridor_output(corridor_file_path);
+               //return Tissue Block
                corridor_output << my_tissue.get_raw_mesh();
+
+            } else {// TB intersects 2 or 3 meshes
+               for (auto s: result) {
+                  corridor_meshes.push_back(total_body[organ_file_name][s.first]);
+                  intersection_percnts.push_back(s.second);
+               } 
+               for (Mymesh &mesh: corridor_meshes) mesh.create_aabb_tree();
+               Surface_mesh corridor_generated = create_corridor(corridor_meshes, example_tissue, intersection_percnts, tolerance);
+
+               if (corridor_generated.number_of_vertices() == 0) {//if corridor point size is 0, return Tissue Block
+                  //std::ofstream corridor_output(corridor_file_path);
+                  corridor_output << my_tissue.get_raw_mesh();
+               } else {
+                  //std::ofstream corridor_output(corridor_file_path);
+                  corridor_output << corridor_generated;
+               }            
+            }               
+            // Create an Assimp importer
+            Assimp::Importer importer;
+            // Read the OFF file
+            const aiScene* scene = importer.ReadFile(LOCAL_OFF, aiProcess_Triangulate); //| aiProcess_FlipUVs);
+            if (scene) {
+               // Create an Assimp exporter
+               Assimp::Exporter exporter;
+               //std::string glb_file_path = "corridor_output.glb";
+               // Export the scene to GLB format
+               exporter.Export(scene, "glb2", LOCAL_GLB); //aiProcess_Triangulate | aiProcess_FlipUVs);
+               std::cout << "Conversion successful. GLB file saved to: " << LOCAL_GLB << std::endl;
             } else {
-               //std::ofstream corridor_output(corridor_file_path);
-               corridor_output << corridor_generated;
-            }            
-         }               
-
-
-         // Create an Assimp importer
-         Assimp::Importer importer;
-         // Read the OFF file
-         const aiScene* scene = importer.ReadFile(LOCAL_OFF, aiProcess_Triangulate); //| aiProcess_FlipUVs);
-         if (scene) {
-            // Create an Assimp exporter
-            Assimp::Exporter exporter;
-            //std::string glb_file_path = "corridor_output.glb";
-            // Export the scene to GLB format
-            exporter.Export(scene, "glb2", LOCAL_GLB); //aiProcess_Triangulate | aiProcess_FlipUVs);
-            std::cout << "Conversion successful. GLB file saved to: " << LOCAL_GLB << std::endl;
+               std::cerr << "Error loading the OFF file: " << importer.GetErrorString() << std::endl;
+            }
+            auto time2 = std::chrono::high_resolution_clock::now();
+            std::chrono::duration<double> time_eclipse = time2 - time1;
+            // if (result.size() == 2 or result.size() == 3) {
+            //    answer[U("parallel_time")] = json::value(time_eclipse.count());
+            // } else {
+            //    answer[U("parallel_time")] = json::value(0);
+            // }
          } else {
-            std::cerr << "Error loading the OFF file: " << importer.GetErrorString() << std::endl;
+            //Use GPU parallel algorithm
+            // GPU corridor generation based on collision detection result
+            auto rui_location_id = jvalue.at("@id").as_string();
+            std::cout << "rui location id: " << rui_location_id << std::endl;
+            std::string output_corridor_dir = "./corridor_models";
+            
+            double tolerance = 0.05;
+
+            Surface_mesh corridor_mesh;
+            if (result.size() > 3) {
+               corridor_mesh = my_tissue.get_raw_mesh();
+               // glb = output_corridor_glb(my_tissue.get_raw_mesh(), rui_location_id, output_corridor_dir);
+            }
+            else if (result.size() == 2 || result.size() == 3)
+            {           
+               AATissue example_tissue_gpu(0, 0, 0, params["x_dimension"]/1000.0, params["y_dimension"]/1000.0, params["z_dimension"]/1000.0);
+               //Mytissue example_tissue_cpu(0.0, 0.0, 0.0, params["x_dimension"]/1000.0, params["y_dimension"]/1000.0, params["z_dimension"]/1000.0);
+               // collision detection result: convert intersection volume (the second value), from double to float
+               std::vector<std::pair<int, float>> float_collision_detection_result;
+               for (auto s: result) float_collision_detection_result.push_back(std::make_pair(s.first, (float) s.second));
+               
+               // CPU baseline
+               // t1 = std::chrono::high_resolution_clock::now();
+               // auto baseline_points = create_point_cloud_corridor_for_multiple_AS(total_body[organ_file_name], example_tissue_cpu, result, tolerance);
+               // t2 = std::chrono::high_resolution_clock::now();
+               // std::chrono::duration<double> duration_cpu = t2 - t1;
+               // std::cout << "CPU baseline: " << duration_cpu.count() << " seconds" << std::endl;
+
+               // GPU implementation
+               // note: loading total body (cpu and gpu) can merge together
+               t1 = std::chrono::high_resolution_clock::now();
+               ResultContainer result_container = test_corridor_for_multiple_AS(example_tissue_gpu, float_collision_detection_result, total_body_gpu[organ_file_name], tolerance);
+               // from float3 arr to CGAL Point vector
+               std::vector<Point> points = convert_point_gpu_to_cpu(result_container, example_tissue_gpu);
+               t2 = std::chrono::high_resolution_clock::now();
+               std::chrono::duration<double> duration_gpu = t2 - t1;
+               std::cout << "GPU corridor: " << duration_gpu.count() << " seconds" << std::endl;
+               
+               // verification GPU results
+               //comparison_CPU_GPU(baseline_points, points);
+
+               // using CGAL function to reconstruct mesh from points
+               if (points.size() == 0) corridor_mesh = my_tissue.get_raw_mesh();
+               else corridor_mesh = create_corridor_from_point_cloud(points);
+               
+               // construct the response of running time
+               //answer[U("CPU_time")] = json::value(duration_cpu.count());
+               //answer[U("GPU_time")] = json::value(duration_gpu.count());
+            }
+            else if (result.size() == 1)
+            {
+               corridor_mesh =  target_organ[result[0].first].get_raw_mesh();
+            }
+            
+            std::string glb = output_corridor_glb(corridor_mesh, rui_location_id);
+
+            // construct response for corridor
+            //answer[U("number_of_collisions")] = json::value(result.size());
+            //answer[U("corridor_glb")] = json::value::string(U(glb));
+            //answer[U("rui_location_id")] = json::value::string(U(rui_location_id));
+
+            std::ofstream corridor_output_glb(LOCAL_GLB); 
+            corridor_output_glb << glb;
          }
-         auto time2 = std::chrono::high_resolution_clock::now();
-         std::chrono::duration<double> time_eclipse = time2 - time1;
-
-         // if (result.size() == 2 or result.size() == 3) {
-         //    answer[U("parallel_time")] = json::value(time_eclipse.count());
-         // } else {
-         //    answer[U("parallel_time")] = json::value(0);
-         // }
          
-
-
+         
+         
 
    }
    catch(...)
@@ -317,6 +398,27 @@ int main(int argc, char **argv)
    // std::string organ_origins_file_path = "/home/catherine/data/model/organ_origins_meter.csv";
    // std::string asct_b_file_path = "/home/catherine/data/model/ASCT-B_3D_Models_Mapping.csv";
    // std::string body_path = "/home/catherine/data/model/plain_filling_hole";
+
+   // Retrieve the environment variable
+   const char* env_var = std::getenv("CPU_GPU");
+
+   // Check if the environment variable is set
+    if (env_var != nullptr) {
+        // Convert the environment variable value to a std::string
+        std::string env_value(env_var);
+        // Compare the environment variable value with "CPU"
+        if (env_value == "CPU") {
+            std::cout << "Use CPU acceleration." << std::endl;
+            CPU_GPU = "CPU";
+        } else {
+            std::cout << "Use GPU acceleration." << std::endl;
+            CPU_GPU = "GPU";
+        }
+    } else {
+        std::cout << "The environment variable 'MY_ENV_VARIABLE' is not set." << std::endl;
+    }
+
+
    if (argc < 7)
    {
       std::cout << "Please provide the organ_origins_file_path, asct_b_file_path, body_path(model_path), reference_organ_json_file, server IP and port number!" << std::endl;
@@ -336,6 +438,12 @@ int main(int argc, char **argv)
    load_all_organs(body_path, total_body);
    load_organ_transformation(reference_organ_json_file, mapping_placement);
 
+   if (CPU_GPU == "GPU") {
+      // load organ for GPU use
+      loadAllOrganModels(body_path, total_body_gpu);
+   }
+   
+
    http_listener listener("http://" + server_ip + ":" + port + "/get-corridor");
 
    //create corridor glb file
@@ -354,12 +462,6 @@ int main(int argc, char **argv)
    } else {
       std::cerr << "Error creating local GLB file: " << LOCAL_GLB << std::endl;
    }
-
-   //test assimp
-   //Assimp::Importer importer;
-   //Assimp::Exporter exporter;
-
-
 
    listener.support(methods::GET,  handle_get);
    listener.support(methods::POST, handle_post);
