@@ -6,10 +6,8 @@ set(CMAKE_BUILD_TYPE "Release")
 set(CGAL_DIR "$ENV{HOME}/CGAL-5.5.3")
 
 
-#
 set(CMAKE_C_COMPILER /usr/bin/gcc-10)
 set(CMAKE_CXX_COMPILER /usr/bin/g++-10)
-#
 find_package(CUDA QUIET REQUIRED)
 
 find_package(CGAL REQUIRED)
@@ -19,18 +17,16 @@ find_package(Boost 1.45.0 COMPONENTS filesystem)
 find_package(assimp REQUIRED)
 find_package(OpenMP REQUIRED)
 
-#
+
 set(CMAKE_CXX_STANDARD 14)
 # Pass options to NVCC
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}; -O3)
 
-#
 cuda_select_nvcc_arch_flags(ARCH_FLAGS)
 
 set(Boost_USE_STATIC_LIBS OFF) 
 set(Boost_USE_MULTITHREADED ON)  
 set(Boost_USE_STATIC_RUNTIME OFF) 
-
 
 
 file(GLOB GEOMETRY_SRC_FILES geometry/*.cpp)
@@ -39,7 +35,6 @@ target_include_directories(geometry PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/geometry)
 target_link_libraries(geometry PUBLIC Eigen3::Eigen)
 target_link_libraries(geometry PUBLIC CGAL::CGAL)
 target_link_libraries(geometry PUBLIC OpenMP::OpenMP_CXX)
-#
 target_link_libraries(geometry PUBLIC assimp)
 
 # static library corridor_gpu
@@ -63,8 +58,6 @@ add_executable(corridor_api server2.cpp)
 target_link_libraries(corridor_api CGAL::CGAL)
 target_link_libraries(corridor_api geometry)
 target_link_libraries(corridor_api cpprestsdk::cpprest)
-#target_link_libraries(corridor_api Eigen3::Eigen)
-#target_link_libraries(corridor_api assimp)
 target_link_libraries(corridor_api OpenMP::OpenMP_CXX)
 target_link_libraries(corridor_api corridor_gpu)
 target_link_libraries(corridor_api corridor_cpu)
