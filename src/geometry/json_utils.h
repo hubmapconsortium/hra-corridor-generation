@@ -41,3 +41,7 @@ json::value read_json_file(std::string const &json_file_path);
 void adjust_placement_target_ancestor(std::unordered_map<std::string, Placement> &mapping_placement);
 
 void print_mapping_placement(std::unordered_map<std::string, Placement> &mapping_placement);
+
+void load_organ_transformation_grlc(const std::string &reference_organ_grlc_file, std::unordered_map<std::string, Placement> &mapping_placement);
+
+void adjust_placement_target_ancestor_grlc(std::unordered_map<std::string, Placement> &mapping_placement);
