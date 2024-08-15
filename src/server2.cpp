@@ -28,7 +28,7 @@ std::map<utility::string_t, utility::string_t> dictionary;
 std::unordered_map<std::string, Eigen::Vector3d> organ_origins;                     //origins of organs
 std::unordered_map<std::string, std::string> mapping;                               //mapping from standard organ name(e.g., #VHFLeftKidney) to glb file name without suffix(e.g., VH_F_Kidney_L)
 std::unordered_map<std::string, std::vector<Mymesh>> total_body;                    //mapping from organ name(glb file name) to vector of meshes of a certain organ
-std::unordered_map<std::string, SpatialEntity> mapping_node_spatial_entity;         // mapping from AS to its information in asct-b table 
+std::unordered_map<std::string, SpatialEntityGRLC> mapping_node_spatial_entity_grlc;         // mapping from AS to its information in asct-b table 
 std::unordered_map<std::string, Placement> mapping_placement;                       // mapping from source plcement to target placement(including rotation, scaling, translation parameters)
 std::unordered_map<std::string, Organ> total_body_gpu;                              // gpu version of total_body: key is organ name, value is Organ object
 
@@ -115,23 +115,30 @@ void parse_json(json::value const &jvalue, json::value &answer)
             // other transformations here. 
          }
 
-         auto reference_organ_name = organ_split(target); 
+         // no need to split
+         // auto reference_organ_name = organ_split(target); 
+         auto reference_organ_name = target;
 
          // test for all organs
+         if (mapping_placement.find(reference_organ_name) != mapping_placement.end()) {
+            reference_organ_name = mapping_placement[reference_organ_name].target;
+         }
+
          if (mapping.find(reference_organ_name) == mapping.end()) 
          {
             std::cout << reference_organ_name << " doesn't exist in ASCT-B table!" << std::endl;
             return;
          }
          
-         std::string organ_file_name = mapping[organ_split(target)];
-         std::cout << "target url: " << target << " target: " << reference_organ_name << " " << "organ file name: " << organ_file_name << std::endl;
+         std::string organ_file_name = convert_url_to_file(mapping[target]);
+         std::cout << "target url: " << target << " target: " << reference_organ_name << " " << "organ file name: " << organ_file_name << "*******" <<std::endl;
 
          Eigen::Vector3d origin = organ_origins[reference_organ_name];
          params["x_origin"] = origin(0);
          params["y_origin"] = origin(1);
          params["z_origin"] = origin(2);
 
+         std::cout << "origin: " << origin(0) << " " << origin(1) << " " << origin(2) << std::endl;
          
          Surface_mesh tissue_mesh;
          std::vector<Point> points; //center of voxels inside the tissue block
@@ -158,7 +165,7 @@ void parse_json(json::value const &jvalue, json::value &answer)
          for (auto s: result_bb) {std::cout << s << std::endl; }
 
          std::cout << "result length: " << result.size() << std::endl;
-         std::cout << "total_body[organ_file_name] length: " << total_body[organ_file_name].size() << std::endl;
+         std::cout << organ_file_name << " length: " << total_body[organ_file_name].size() << std::endl;
 
 
          if (CPU_GPU == "CPU") {
@@ -180,7 +187,6 @@ void parse_json(json::value const &jvalue, json::value &answer)
                corridor_output << total_body[organ_file_name][result[0].first].get_raw_mesh();
 
             } else if (result.size() == 0 or result.size() > 3) {
-               //std::ofstream corridor_output(corridor_file_path);
                //return Tissue Block
                corridor_output << my_tissue.get_raw_mesh();
 
@@ -193,10 +199,8 @@ void parse_json(json::value const &jvalue, json::value &answer)
                Surface_mesh corridor_generated = create_corridor(corridor_meshes, example_tissue, intersection_percnts, tolerance);
 
                if (corridor_generated.number_of_vertices() == 0) {//if corridor point size is 0, return Tissue Block
-                  //std::ofstream corridor_output(corridor_file_path);
                   corridor_output << my_tissue.get_raw_mesh();
                } else {
-                  //std::ofstream corridor_output(corridor_file_path);
                   corridor_output << corridor_generated;
                }            
             }               
@@ -242,13 +246,6 @@ void parse_json(json::value const &jvalue, json::value &answer)
                // collision detection result: convert intersection volume (the second value), from double to float
                std::vector<std::pair<int, float>> float_collision_detection_result;
                for (auto s: result) float_collision_detection_result.push_back(std::make_pair(s.first, (float) s.second));
-               
-               // CPU baseline
-               // t1 = std::chrono::high_resolution_clock::now();
-               // auto baseline_points = create_point_cloud_corridor_for_multiple_AS(total_body[organ_file_name], example_tissue_cpu, result, tolerance);
-               // t2 = std::chrono::high_resolution_clock::now();
-               // std::chrono::duration<double> duration_cpu = t2 - t1;
-               // std::cout << "CPU baseline: " << duration_cpu.count() << " seconds" << std::endl;
 
                // GPU implementation
                // note: loading total body (cpu and gpu) can merge together
@@ -259,9 +256,6 @@ void parse_json(json::value const &jvalue, json::value &answer)
                t2 = std::chrono::high_resolution_clock::now();
                std::chrono::duration<double> duration_gpu = t2 - t1;
                std::cout << "GPU corridor: " << duration_gpu.count() << " seconds" << std::endl;
-               
-               // verification GPU results
-               //comparison_CPU_GPU(baseline_points, points);
 
                // using CGAL function to reconstruct mesh from points
                if (points.size() == 0) corridor_mesh = my_tissue.get_raw_mesh();
@@ -395,10 +389,6 @@ void handle_options(http_request request)
 int main(int argc, char **argv)
 {
 
-   // std::string organ_origins_file_path = "/home/catherine/data/model/organ_origins_meter.csv";
-   // std::string asct_b_file_path = "/home/catherine/data/model/ASCT-B_3D_Models_Mapping.csv";
-   // std::string body_path = "/home/catherine/data/model/plain_filling_hole";
-
    // Retrieve the environment variable
    const char* env_var = std::getenv("CPU_GPU");
 
@@ -418,25 +408,33 @@ int main(int argc, char **argv)
         std::cout << "The environment variable 'MY_ENV_VARIABLE' is not set." << std::endl;
     }
 
+   CPU_GPU = "CPU";
+   std::cout << "Use CPU acceleration for debugging" << std::endl;
 
-   if (argc < 7)
+   if (argc < 6)
    {
-      std::cout << "Please provide the organ_origins_file_path, asct_b_file_path, body_path(model_path), reference_organ_json_file, server IP and port number!" << std::endl;
+      std::cout << "Please provide the body_path(off_model_path), asct_b_file_path, reference_organ_json_file, server IP and port number!" << std::endl;
       return 0;
    }
 
-   std::string organ_origins_file_path = std::string(argv[1]);
-   std::string asct_b_file_path = std::string(argv[2]);
-   std::string body_path = std::string(argv[3]);
-   std::string reference_organ_json_file = std::string(argv[4]);
-   std::string server_ip = std::string(argv[5]);
-   std::string port = std::string(argv[6]);
+   std::string body_path = std::string(argv[1]);
+   std::string asct_b_grlc_file_path = std::string(argv[2]);
+   std::string reference_organ_grlc_file = std::string(argv[3]);
+   std::string server_ip = std::string(argv[4]);
+   std::string port = std::string(argv[5]);
 
    // load origins
-   gen_origin(organ_origins_file_path, organ_origins);
-   load_ASCT_B(asct_b_file_path, mapping, mapping_node_spatial_entity);
+   gen_origin_grlc(asct_b_grlc_file_path, organ_origins);
+   // load ASCT-B
+   load_ASCT_B_grlc(asct_b_grlc_file_path, mapping, mapping_node_spatial_entity_grlc);
+   // load organ models
    load_all_organs(body_path, total_body);
-   load_organ_transformation(reference_organ_json_file, mapping_placement);
+   std::cout << "*****************" << std::endl;
+   for (auto& p: total_body) {
+      std::cout << p.first << std::endl;
+   }
+   // load mapping placement
+   load_organ_transformation_grlc(reference_organ_grlc_file, mapping_placement);
 
    if (CPU_GPU == "GPU") {
       // load organ for GPU use
