@@ -423,25 +423,6 @@ int main(int argc, char **argv)
    std::string server_ip = std::string(argv[4]);
    std::string port = std::string(argv[5]);
 
-   // load origins
-   gen_origin_grlc(asct_b_grlc_file_path, organ_origins);
-   // load ASCT-B
-   load_ASCT_B_grlc(asct_b_grlc_file_path, mapping, mapping_node_spatial_entity_grlc);
-   // load organ models
-   load_all_organs(body_path, total_body);
-   std::cout << "*****************" << std::endl;
-   for (auto& p: total_body) {
-      std::cout << p.first << std::endl;
-   }
-   // load mapping placement
-   load_organ_transformation_grlc(reference_organ_grlc_file, mapping_placement);
-
-   if (CPU_GPU == "GPU") {
-      // load organ for GPU use
-      loadAllOrganModels(body_path, total_body_gpu);
-   }
-   
-
    http_listener listener("http://" + server_ip + ":" + port + "/get-corridor");
 
    //create corridor glb file
@@ -465,7 +446,6 @@ int main(int argc, char **argv)
    listener.support(methods::POST, handle_post);
    listener.support(methods::OPTIONS, handle_options);
 
-
    try
    {
       listener
@@ -475,6 +455,24 @@ int main(int argc, char **argv)
             std::cout << "\nstarting to listen" << std::endl;
             })
          .wait();
+
+      // load origins
+      gen_origin_grlc(asct_b_grlc_file_path, organ_origins);
+      // load ASCT-B
+      load_ASCT_B_grlc(asct_b_grlc_file_path, mapping, mapping_node_spatial_entity_grlc);
+      // load organ models
+      load_all_organs(body_path, total_body);
+      std::cout << "*****************" << std::endl;
+      for (auto& p: total_body) {
+         std::cout << p.first << std::endl;
+      }
+      // load mapping placement
+      load_organ_transformation_grlc(reference_organ_grlc_file, mapping_placement);
+
+      if (CPU_GPU == "GPU") {
+         // load organ for GPU use
+         loadAllOrganModels(body_path, total_body_gpu);
+      }
 
       while (true);
    }
