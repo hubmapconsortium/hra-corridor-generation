@@ -137,18 +137,10 @@ POST http://server_ip:port/get-corridor
   "z_dimension": 2
 }
   ```
-  - Request as a CURL command: ( save response glb file to output_corridor.glb )
+  - Request as a CURL command on staging server:
   ```bash
-  curl -d '@examples/test-corridor.json' -H "Content-Type: application/json" -X POST http://10.0.2.15:12345/get-corridor -o output_corridor.glb
+  curl -d '@examples/test-corridor.json' -H "Content-Type: application/json" -X POST https://dwwcpwad72.us-east-2.awsapprunner.com/get-corridor -o output_corridor.glb
   ```
 
   Input: [RUI Registration](examples/test-corridor.json)
   Produces: [result GLB file](examples/sample-corridor-result.glb)
-
-
-
-
-
-
-
-
