@@ -8,7 +8,7 @@ WORKDIR /usr/src/app/build
 RUN wget https://github.com/CGAL/cgal/releases/download/v5.5.3/CGAL-5.5.3.zip && unzip CGAL-5.5.3.zip -d /usr/src/app && rm CGAL-5.5.3.zip
 
 COPY src ..
-ENV HOME /usr/src/app
+ENV HOME=/usr/src/app
 RUN cmake .. 
 RUN make
 
@@ -24,6 +24,6 @@ COPY model model
 COPY server.sh .
 
 ENV CPU_GPU="CPU"
-ENV PORT 8080
+ENV PORT=8080
 EXPOSE 8080
 CMD [ "./server.sh" ]
