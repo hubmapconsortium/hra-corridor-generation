@@ -17,7 +17,7 @@ RUN make
 FROM ubuntu:20.04
 
 ARG DEBIAN_FRONTEND=noninteractive
-RUN apt update && apt install -y libssl-dev libboost-all-dev libgmp-dev libmpfr-dev libeigen3-dev libassimp-dev libcpprest-dev curl
+RUN apt update && apt install -y libssl-dev libboost-all-dev libgmp-dev libmpfr-dev libeigen3-dev libassimp-dev libcpprest-dev curl unzip
 WORKDIR /usr/src/app
 COPY --from=build /usr/src/app/build/corridor_api .
 COPY download-data.sh .
