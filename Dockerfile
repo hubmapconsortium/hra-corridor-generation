@@ -17,10 +17,11 @@ RUN make
 FROM ubuntu:20.04
 
 ARG DEBIAN_FRONTEND=noninteractive
-RUN apt update && apt install -y libssl-dev libboost-all-dev libgmp-dev libmpfr-dev libeigen3-dev libassimp-dev libcpprest-dev
+RUN apt update && apt install -y libssl-dev libboost-all-dev libgmp-dev libmpfr-dev libeigen3-dev libassimp-dev libcpprest-dev curl
 WORKDIR /usr/src/app
 COPY --from=build /usr/src/app/build/corridor_api .
-COPY model model
+COPY download-data.sh .
+RUN ./download-data.sh
 COPY server.sh .
 
 ENV CPU_GPU="CPU"
