@@ -89,10 +89,6 @@ void tissue_transform(std::unordered_map<std::string, double> &params, Surface_m
     tissue_mesh.add_face(vd[0], vd[1], vd[5], vd[4]);
     tissue_mesh.add_face(vd[2], vd[3], vd[7], vd[6]);
 
-    std::ofstream tissue_mesh_off("tissue_mesh.off");
-    tissue_mesh_off << tissue_mesh;
-    tissue_mesh_off.close();
-
     double delta_x = (max_x - min_x) / resolution, delta_y = (max_y - min_y) / resolution, delta_z = (max_z - min_z) / resolution;    
     double center_x, center_y, center_z;
 
