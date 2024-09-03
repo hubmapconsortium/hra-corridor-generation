@@ -111,9 +111,6 @@ void tissue_transform(std::unordered_map<std::string, double> &params, Surface_m
 void load_all_organs(const std::string &body_path, std::unordered_map<std::string, std::vector<Mymesh>> &total_body)
 {
     // std::string body_path = "/home/luchen/collision_detection_kidney_2/models/AS";
-    std::ofstream output_wkt;
-    output_wkt.open("output.wkt");
-
     for (fs::directory_entry& organ_path : fs::directory_iterator(body_path)) 
     {
         std::string organ_name = organ_path.path().filename().string();
@@ -126,14 +123,8 @@ void load_all_organs(const std::string &body_path, std::unordered_map<std::strin
 
         for (auto &AS: total_body[organ_name]) {
             AS.create_aabb_tree();
-            // std::string as_wkt = AS.to_wkt();
-            // output_wkt << organ_name << "|" << AS.label << "|" << as_wkt << "\n";
-
         }
     }
-
-    output_wkt.close();
-
 }
 
 
