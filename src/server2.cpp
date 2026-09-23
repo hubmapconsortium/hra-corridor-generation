@@ -25,6 +25,8 @@ namespace fs = boost::filesystem;
 
 #include <cstdio> 
 #include <cstdlib>
+#include <csignal>
+#include <pthread.h>
 
 
 //global variables
@@ -372,6 +374,13 @@ void handle_options(http_request request)
 
 int main(int argc, char **argv)
 {
+   // Block SIGINT/SIGTERM before any threads are spawned so every thread inherits
+   // the mask; main then waits for them with sigwait instead of busy looping.
+   sigset_t shutdown_signals;
+   sigemptyset(&shutdown_signals);
+   sigaddset(&shutdown_signals, SIGINT);
+   sigaddset(&shutdown_signals, SIGTERM);
+   pthread_sigmask(SIG_BLOCK, &shutdown_signals, nullptr);
 
    // Retrieve the environment variable
    const char* env_var = std::getenv("CPU_GPU");
@@ -437,7 +446,11 @@ int main(int argc, char **argv)
             })
          .wait();
 
-      while (true);
+      // Sleep until asked to shut down (no CPU used while idle)
+      int sig = 0;
+      sigwait(&shutdown_signals, &sig);
+      std::cout << "\nreceived signal " << sig << ", shutting down" << std::endl;
+      listener.close().wait();
    }
    catch (std::exception const & e)
    {
